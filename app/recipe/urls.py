@@ -8,6 +8,7 @@ router = DefaultRouter()
 # ex) api/recipe/1 => recipe obj id:1
 # ViewSetの中で色々な処理を行う
 router.register("tags",views.TagViewSet)
+router.register("ingredients",views.IngredientViewSet)
 
 app_name = "recipe"
 urlpatterns = [
