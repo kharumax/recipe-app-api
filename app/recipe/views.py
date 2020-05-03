@@ -13,7 +13,14 @@ class BaseRecipeAttrViewSet(viewsets.GenericViewSet,mixins.ListModelMixin,mixins
 
     def get_queryset(self):
         """Return obj for current auth user only"""
-        return self.queryset.filter(user=self.request.user).order_by("-name")
+        assigned_only = bool(
+            int(self.request.query_params.get("assigned_only",0))
+        )
+        queryset = self.queryset
+        if assigned_only:
+            queryset = queryset.filter(recipe__isnull=False)
+
+        return queryset.filter(user=self.request.user).order_by("-name").distinct()
 
     def perform_create(self, serializer):
         """Create a new obj"""
@@ -39,8 +46,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
+    def _params_to_ints(self,qs):
+        """Convert a list ids to a list ints"""
+        return [int(str_id) for str_id in qs.split(",")]
+
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        tags = self.request.query_params.get("tags")
+        ingredients = self.request.query_params.get("ingredients")
+        title = self.request.query_params.get("title")
+        queryset = self.queryset
+        if tags:
+            tag_ids = self._params_to_ints(tags)
+            queryset = queryset.filter(tags__id__in=tag_ids)
+        if ingredients:
+            ingredients_ids = self._params_to_ints(ingredients)
+            queryset = queryset.filter(ingredients__id__in=ingredients_ids)
+        if title:
+            queryset = queryset.filter(title__icontains=title)
+
+        return queryset.filter(user=self.request.user)
 
     def get_serializer_class(self):
         """Return appropriate serializer class by case"""
